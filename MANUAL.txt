@@ -1,0 +1,57 @@
+SLACKER - Quick Start Guide
+============================
+
+INSTALLATION
+------------
+1. Double-click "Slacker Setup 1.0.0.exe"
+2. If Windows warns about unknown publisher, click "More info" → "Run anyway"
+3. Choose install location (or keep default)
+4. Click Install
+5. Done! Find Slacker in your Start Menu or Desktop
+
+
+HOW TO USE
+----------
+
+ADDING A TASK
+1. Type your task in the text field (e.g., "Team standup")
+2. Click the day buttons to select which days (Mon, Tue, Wed, etc.)
+3. Optionally set a time for a reminder notification
+4. Press the + button
+
+Example: "Take out trash" on Mon and Thu
+
+COMPLETING TASKS
+- Click the circle next to a task to mark it done
+- Completed tasks get crossed out
+- Tomorrow the same task will appear fresh again
+
+NAVIGATING DATES
+- Use < > arrows to see other days
+- Or click the date to pick from calendar
+- See what tasks are scheduled for any day
+
+MANAGING ALL TASKS
+- Click "Manage" button at the bottom
+- Opens a window showing ALL your recurring tasks
+- Delete tasks you no longer need from here
+
+NOTIFICATIONS
+- If you set a time, you'll get a Windows notification when it's due
+- Make sure Windows notifications are enabled for Slacker
+
+
+TIPS
+----
+- Tasks repeat weekly on the days you select
+- Checking off a task only marks it done for THAT day
+- The app saves everything locally - no account needed
+- Your data is stored in: %APPDATA%\slacker
+
+
+UNINSTALL
+---------
+Settings → Apps → Slacker → Uninstall
+
+
+Enjoy being productively lazy!
