@@ -1,0 +1,69 @@
+.table-container {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-app-region: no-drag;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    position: sticky;
+    top: 0;
+    background: var(--bg-primary);
+}
+
+th {
+    text-align: left;
+    padding: 12px 8px;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--bg-card);
+}
+
+th:last-child {
+    width: 40px;
+}
+
+td {
+    padding: 14px 8px;
+    border-bottom: 1px solid var(--bg-secondary);
+    font-size: 14px;
+}
+
+tr:hover td {
+    background: var(--bg-secondary);
+}
+
+.task-name {
+    font-weight: 500;
+}
+
+.task-days-cell {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.task-time-cell {
+    color: var(--accent);
+    font-size: 13px;
+}
+
+.delete-btn-table {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: color 0.2s;
+}
+
+.delete-btn-table:hover {
+    color: var(--accent);
+}

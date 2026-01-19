@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
+    <title>Manage Tasks</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="manage.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>All Tasks</h1>
+        </header>
+
+        <div id="task-table-container" class="table-container">
+            <table id="task-table">
+                <thead>
+                    <tr>
+                        <th>Task</th>
+                        <th>Days</th>
+                        <th>Time</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="task-tbody"></tbody>
+            </table>
+        </div>
+
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <p>No tasks scheduled</p>
+        </div>
+    </div>
+
+    <script src="manage.js"></script>
+</body>
+</html>
