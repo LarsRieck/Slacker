@@ -2,6 +2,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const taskTbody = document.getElementById('task-tbody');
     const emptyState = document.getElementById('empty-state');
     const tableContainer = document.getElementById('task-table-container');
+    const confirmModal = document.getElementById('confirm-modal');
+    const confirmMessage = document.getElementById('confirm-message');
+    const confirmYes = document.getElementById('confirm-yes');
+    const confirmNo = document.getElementById('confirm-no');
+
+    // Custom confirm dialog that doesn't break focus
+    function showConfirm(message) {
+        return new Promise((resolve) => {
+            confirmMessage.textContent = message;
+            confirmModal.classList.remove('hidden');
+
+            const handleYes = () => {
+                cleanup();
+                resolve(true);
+            };
+            const handleNo = () => {
+                cleanup();
+                resolve(false);
+            };
+            const cleanup = () => {
+                confirmYes.removeEventListener('click', handleYes);
+                confirmNo.removeEventListener('click', handleNo);
+                confirmModal.classList.add('hidden');
+            };
+
+            confirmYes.addEventListener('click', handleYes);
+            confirmNo.addEventListener('click', handleNo);
+        });
+    }
 
     loadTasks();
 
@@ -35,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="task-name">${escapeHtml(task.title)}</td>
                 <td class="task-days-cell">${formatDays(task.recurrence_value)}</td>
                 <td class="task-time-cell">${task.task_time ? formatTime(task.task_time) : '-'}</td>
+                <td class="task-reset-cell">${task.reset_time ? formatTime(task.reset_time) : '-'}</td>
                 <td>
                     <button class="delete-btn-table" data-action="delete" title="Delete task">×</button>
                 </td>
@@ -47,7 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const row = e.target.closest('tr');
             const taskId = parseInt(row.dataset.id);
 
-            if (confirm('Delete this recurring task?')) {
+            const confirmed = await showConfirm('Delete this recurring task?');
+            if (confirmed) {
                 await window.api.deleteTask(taskId);
                 loadTasks();
             }

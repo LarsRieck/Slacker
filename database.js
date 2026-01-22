@@ -23,6 +23,14 @@ async function init() {
             db.run('DROP TABLE IF EXISTS tasks');
             db.run('DROP TABLE IF EXISTS completions');
         }
+
+        // Migration: add reset_time column if missing
+        try {
+            db.exec("SELECT reset_time FROM tasks LIMIT 1");
+        } catch (e) {
+            console.log('Adding reset_time column...');
+            db.run('ALTER TABLE tasks ADD COLUMN reset_time TEXT');
+        }
     } else {
         db = new SQL.Database();
     }
@@ -35,6 +43,7 @@ async function init() {
             task_time TEXT,
             recurrence_type TEXT NOT NULL,
             recurrence_value TEXT,
+            reset_time TEXT,
             created_at TEXT NOT NULL
         )
     `);
@@ -63,13 +72,34 @@ function getTodayDate() {
     return new Date().toISOString().split('T')[0];
 }
 
+// Calculate effective date for a task based on its reset time
+// If current time is before the reset time, the task is still for "yesterday"
+function getEffectiveDateForTask(resetTime) {
+    const now = new Date();
+    if (!resetTime) {
+        return now.toISOString().split('T')[0]; // midnight reset = today
+    }
+    const [resetHour, resetMin] = resetTime.split(':').map(Number);
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const resetMinutes = resetHour * 60 + resetMin;
+
+    if (currentMinutes < resetMinutes) {
+        // Before reset time: use yesterday
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        return yesterday.toISOString().split('T')[0];
+    }
+    return now.toISOString().split('T')[0];
+}
+
 // recurrence_type: "daily", "weekly", "monthly"
 // recurrence_value: for weekly = "0,1,2" (Sun,Mon,Tue), for monthly = "15" (day of month)
-function addTask(title, recurrenceType, recurrenceValue = null, taskTime = null) {
+// resetTime: optional custom reset time (HH:MM), null means midnight
+function addTask(title, recurrenceType, recurrenceValue = null, taskTime = null, resetTime = null) {
     const stmt = db.prepare(
-        'INSERT INTO tasks (title, task_time, recurrence_type, recurrence_value, created_at) VALUES (?, ?, ?, ?, ?)'
+        'INSERT INTO tasks (title, task_time, recurrence_type, recurrence_value, reset_time, created_at) VALUES (?, ?, ?, ?, ?, ?)'
     );
-    stmt.run([title, taskTime, recurrenceType, recurrenceValue, new Date().toISOString()]);
+    stmt.run([title, taskTime, recurrenceType, recurrenceValue, resetTime, new Date().toISOString()]);
     stmt.free();
     saveDatabase();
 
@@ -93,29 +123,51 @@ function getTasksForDate(dateStr) {
     const dayOfMonth = date.getDate();
 
     const allTasks = getAllTasks();
-    const completions = getCompletionsForDate(dateStr);
-    const completedTaskIds = new Set(completions.map(c => c.task_id));
 
-    // Filter tasks that apply to this date
-    const tasksForDate = allTasks.filter(task => {
+    // Check if recurrence matches for a given date
+    function matchesRecurrence(task, targetDate) {
+        const d = new Date(targetDate + 'T00:00:00');
+        const dow = d.getDay();
+        const dom = d.getDate();
+
         if (task.recurrence_type === 'daily') {
             return true;
         }
         if (task.recurrence_type === 'weekly' && task.recurrence_value) {
             const days = task.recurrence_value.split(',').map(Number);
-            return days.includes(dayOfWeek);
+            return days.includes(dow);
         }
         if (task.recurrence_type === 'monthly' && task.recurrence_value) {
-            return parseInt(task.recurrence_value) === dayOfMonth;
+            return parseInt(task.recurrence_value) === dom;
         }
         return false;
+    }
+
+    // Filter tasks that apply to this date based on recurrence
+    // (reset time only affects completion tracking, not display)
+    const tasksForDate = allTasks.filter(task => {
+        return matchesRecurrence(task, dateStr);
     });
 
     // Add completion status
-    return tasksForDate.map(task => ({
-        ...task,
-        completed: completedTaskIds.has(task.id)
-    })).sort((a, b) => {
+    // Use effective date only when viewing today, otherwise use the selected date
+    const today = getTodayDate();
+    return tasksForDate.map(task => {
+        let completionDate;
+        if (dateStr === today) {
+            // Viewing today: use effective date (handles custom reset times)
+            completionDate = getEffectiveDateForTask(task.reset_time);
+        } else {
+            // Viewing past/future: use the actual selected date
+            completionDate = dateStr;
+        }
+        const completions = getCompletionsForDate(completionDate);
+        const isCompleted = completions.some(c => c.task_id === task.id);
+        return {
+            ...task,
+            completed: isCompleted
+        };
+    }).sort((a, b) => {
         // Sort: incomplete first, then by time
         if (a.completed !== b.completed) return a.completed ? 1 : -1;
         if (a.task_time && b.task_time) return a.task_time.localeCompare(b.task_time);
@@ -137,13 +189,24 @@ function getCompletionsForDate(dateStr) {
 }
 
 function toggleTask(taskId, dateStr) {
-    const completions = getCompletionsForDate(dateStr);
+    // Get task to determine its reset_time
+    const stmt = db.prepare('SELECT reset_time FROM tasks WHERE id = ?');
+    stmt.bind([taskId]);
+    let resetTime = null;
+    if (stmt.step()) {
+        resetTime = stmt.getAsObject().reset_time;
+    }
+    stmt.free();
+
+    // Use effective date for completion tracking
+    const effectiveDate = getEffectiveDateForTask(resetTime);
+    const completions = getCompletionsForDate(effectiveDate);
     const isCompleted = completions.some(c => c.task_id === taskId);
 
     if (isCompleted) {
-        db.run('DELETE FROM completions WHERE task_id = ? AND completed_date = ?', [taskId, dateStr]);
+        db.run('DELETE FROM completions WHERE task_id = ? AND completed_date = ?', [taskId, effectiveDate]);
     } else {
-        db.run('INSERT INTO completions (task_id, completed_date) VALUES (?, ?)', [taskId, dateStr]);
+        db.run('INSERT INTO completions (task_id, completed_date) VALUES (?, ?)', [taskId, effectiveDate]);
     }
     saveDatabase();
     return !isCompleted;
@@ -156,9 +219,64 @@ function deleteTask(taskId) {
 }
 
 function getTasksWithTimesForToday() {
+    // Get all tasks and filter to those with reminder times that are active today
+    const allTasks = getAllTasks();
     const today = getTodayDate();
-    const tasks = getTasksForDate(today);
-    return tasks.filter(t => t.task_time && !t.completed);
+
+    return allTasks.filter(task => {
+        if (!task.task_time) return false;
+
+        const effectiveDate = getEffectiveDateForTask(task.reset_time);
+        if (effectiveDate !== today) return false;
+
+        // Check recurrence matches today
+        const date = new Date(today + 'T00:00:00');
+        const dayOfWeek = date.getDay();
+        const dayOfMonth = date.getDate();
+
+        let matchesRecurrence = false;
+        if (task.recurrence_type === 'daily') {
+            matchesRecurrence = true;
+        } else if (task.recurrence_type === 'weekly' && task.recurrence_value) {
+            const days = task.recurrence_value.split(',').map(Number);
+            matchesRecurrence = days.includes(dayOfWeek);
+        } else if (task.recurrence_type === 'monthly' && task.recurrence_value) {
+            matchesRecurrence = parseInt(task.recurrence_value) === dayOfMonth;
+        }
+
+        if (!matchesRecurrence) return false;
+
+        // Check if not completed
+        const completions = getCompletionsForDate(effectiveDate);
+        const isCompleted = completions.some(c => c.task_id === task.id);
+        return !isCompleted;
+    });
+}
+
+// Get all tasks with reset times that are scheduled for today
+function getTasksWithResetTimesForToday() {
+    const allTasks = getAllTasks();
+    const today = getTodayDate();
+    const date = new Date(today + 'T00:00:00');
+    const dayOfWeek = date.getDay();
+    const dayOfMonth = date.getDate();
+
+    return allTasks.filter(task => {
+        if (!task.reset_time) return false;
+
+        // Check recurrence matches today
+        let matchesRecurrence = false;
+        if (task.recurrence_type === 'daily') {
+            matchesRecurrence = true;
+        } else if (task.recurrence_type === 'weekly' && task.recurrence_value) {
+            const days = task.recurrence_value.split(',').map(Number);
+            matchesRecurrence = days.includes(dayOfWeek);
+        } else if (task.recurrence_type === 'monthly' && task.recurrence_value) {
+            matchesRecurrence = parseInt(task.recurrence_value) === dayOfMonth;
+        }
+
+        return matchesRecurrence;
+    });
 }
 
 module.exports = {
@@ -168,5 +286,6 @@ module.exports = {
     getTasksForDate,
     toggleTask,
     deleteTask,
-    getTasksWithTimesForToday
+    getTasksWithTimesForToday,
+    getTasksWithResetTimesForToday
 };

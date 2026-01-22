@@ -19,18 +19,23 @@
         </header>
 
         <form id="task-form" class="task-form">
-            <input
-                type="text"
-                id="task-input"
-                placeholder="Add a task..."
-                required
-                autocomplete="off"
-            >
-            <input
-                type="time"
-                id="time-input"
-                title="Optional: Set a reminder time"
-            >
+            <div class="autocomplete-wrapper">
+                <input
+                    type="text"
+                    id="task-input"
+                    placeholder="Add a task..."
+                    required
+                    autocomplete="off"
+                >
+                <div id="autocomplete-list" class="autocomplete-list hidden"></div>
+            </div>
+            <div class="reset-time-option">
+                <label>
+                    <input type="checkbox" id="custom-reset-check" checked>
+                    Reset
+                </label>
+                <input type="time" id="reset-time-input">
+            </div>
             <button type="submit">+</button>
         </form>
 
@@ -44,12 +49,32 @@
             <button type="button" class="day-btn" data-day="0">Sun</button>
         </div>
 
+        <div class="list-controls">
+            <label for="sort-select">Sort:</label>
+            <select id="sort-select">
+                <option value="default">Status & Time</option>
+                <option value="alphabetical">Alphabetical</option>
+                <option value="reset-time">Reset Time</option>
+            </select>
+        </div>
+
         <div id="task-list" class="task-list"></div>
 
         <footer>
             <span id="task-count">0 tasks</span>
             <button id="manage-btn" class="manage-btn">Manage</button>
         </footer>
+    </div>
+
+    <!-- Custom confirm modal -->
+    <div id="confirm-modal" class="modal hidden">
+        <div class="modal-content">
+            <p id="confirm-message"></p>
+            <div class="modal-buttons">
+                <button id="confirm-yes" class="modal-btn confirm">Delete</button>
+                <button id="confirm-no" class="modal-btn cancel">Cancel</button>
+            </div>
+        </div>
     </div>
 
     <script src="renderer.js"></script>

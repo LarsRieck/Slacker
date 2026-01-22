@@ -1,7 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     const taskForm = document.getElementById('task-form');
     const taskInput = document.getElementById('task-input');
-    const timeInput = document.getElementById('time-input');
+    const customResetCheck = document.getElementById('custom-reset-check');
+    const resetTimeInput = document.getElementById('reset-time-input');
     const taskList = document.getElementById('task-list');
     const taskCount = document.getElementById('task-count');
     const selectedDateInput = document.getElementById('selected-date');
@@ -9,6 +10,41 @@ document.addEventListener('DOMContentLoaded', () => {
     const nextDayBtn = document.getElementById('next-day');
     const dayButtons = document.querySelectorAll('.day-btn');
     const manageBtn = document.getElementById('manage-btn');
+    const sortSelect = document.getElementById('sort-select');
+    const confirmModal = document.getElementById('confirm-modal');
+    const confirmMessage = document.getElementById('confirm-message');
+    const confirmYes = document.getElementById('confirm-yes');
+    const confirmNo = document.getElementById('confirm-no');
+    const autocompleteList = document.getElementById('autocomplete-list');
+
+    // Autocomplete state
+    let allTaskTitles = [];
+    let selectedAutocompleteIndex = -1;
+
+    // Custom confirm dialog that doesn't break focus
+    function showConfirm(message) {
+        return new Promise((resolve) => {
+            confirmMessage.textContent = message;
+            confirmModal.classList.remove('hidden');
+
+            const handleYes = () => {
+                cleanup();
+                resolve(true);
+            };
+            const handleNo = () => {
+                cleanup();
+                resolve(false);
+            };
+            const cleanup = () => {
+                confirmYes.removeEventListener('click', handleYes);
+                confirmNo.removeEventListener('click', handleNo);
+                confirmModal.classList.add('hidden');
+            };
+
+            confirmYes.addEventListener('click', handleYes);
+            confirmNo.addEventListener('click', handleNo);
+        });
+    }
 
     // Current selected date for viewing (defaults to today)
     let selectedDate = new Date().toISOString().split('T')[0];
@@ -16,15 +52,120 @@ document.addEventListener('DOMContentLoaded', () => {
     // Selected days for new task (defaults to none)
     let selectedDays = new Set();
 
+    // Current sort mode
+    let sortMode = localStorage.getItem('sortMode') || 'default';
+
     // Initialize date picker
     selectedDateInput.value = selectedDate;
 
+    // Initialize sort selector
+    sortSelect.value = sortMode;
+    sortSelect.addEventListener('change', () => {
+        sortMode = sortSelect.value;
+        localStorage.setItem('sortMode', sortMode);
+        loadTasks();
+    });
+
     // Load tasks on start
     loadTasks();
+    loadTaskTitles();
+
+    // Auto-refresh every 10 seconds to catch reset time changes
+    setInterval(() => {
+        loadTasks();
+    }, 10000);
+
+    // Load all task titles for autocomplete
+    async function loadTaskTitles() {
+        const tasks = await window.api.getAllTasks();
+        // Get unique titles
+        allTaskTitles = [...new Set(tasks.map(t => t.title))];
+    }
+
+    // Autocomplete input handler
+    taskInput.addEventListener('input', () => {
+        const value = taskInput.value.trim().toLowerCase();
+        if (value.length === 0) {
+            hideAutocomplete();
+            return;
+        }
+
+        const matches = allTaskTitles.filter(title =>
+            title.toLowerCase().includes(value) && title.toLowerCase() !== value
+        );
+
+        if (matches.length === 0) {
+            hideAutocomplete();
+            return;
+        }
+
+        showAutocomplete(matches);
+    });
+
+    // Keyboard navigation for autocomplete
+    taskInput.addEventListener('keydown', (e) => {
+        const items = autocompleteList.querySelectorAll('.autocomplete-item');
+        if (items.length === 0) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedAutocompleteIndex = Math.min(selectedAutocompleteIndex + 1, items.length - 1);
+            updateAutocompleteSelection(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedAutocompleteIndex = Math.max(selectedAutocompleteIndex - 1, 0);
+            updateAutocompleteSelection(items);
+        } else if (e.key === 'Enter' && selectedAutocompleteIndex >= 0) {
+            e.preventDefault();
+            selectAutocompleteItem(items[selectedAutocompleteIndex].textContent);
+        } else if (e.key === 'Escape') {
+            hideAutocomplete();
+        }
+    });
+
+    // Hide autocomplete when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.autocomplete-wrapper')) {
+            hideAutocomplete();
+        }
+    });
+
+    function showAutocomplete(matches) {
+        selectedAutocompleteIndex = -1;
+        autocompleteList.innerHTML = matches.slice(0, 5).map(title =>
+            `<div class="autocomplete-item">${escapeHtml(title)}</div>`
+        ).join('');
+        autocompleteList.classList.remove('hidden');
+
+        // Add click handlers
+        autocompleteList.querySelectorAll('.autocomplete-item').forEach(item => {
+            item.addEventListener('click', () => {
+                selectAutocompleteItem(item.textContent);
+            });
+        });
+    }
+
+    function hideAutocomplete() {
+        autocompleteList.classList.add('hidden');
+        selectedAutocompleteIndex = -1;
+    }
+
+    function updateAutocompleteSelection(items) {
+        items.forEach((item, i) => {
+            item.classList.toggle('selected', i === selectedAutocompleteIndex);
+        });
+    }
+
+    function selectAutocompleteItem(title) {
+        taskInput.value = title;
+        hideAutocomplete();
+        taskInput.focus();
+    }
 
     // Listen for refresh from manage window
     window.api.onRefreshTasks(() => {
         loadTasks();
+        loadTaskTitles();
     });
 
     // Date navigation
@@ -54,6 +195,16 @@ document.addEventListener('DOMContentLoaded', () => {
         window.api.openManageWindow();
     });
 
+    // Custom reset time checkbox
+    customResetCheck.addEventListener('change', () => {
+        if (customResetCheck.checked) {
+            resetTimeInput.classList.remove('hidden');
+        } else {
+            resetTimeInput.classList.add('hidden');
+            resetTimeInput.value = '';
+        }
+    });
+
     // Day selector for new tasks
     dayButtons.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -71,34 +222,71 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add task form submission
     taskForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        hideAutocomplete();
 
         const title = taskInput.value.trim();
-        const taskTime = timeInput.value || null;
+        const resetTime = customResetCheck.checked && resetTimeInput.value ? resetTimeInput.value : null;
 
         if (!title) return;
         if (selectedDays.size === 0) {
-            alert('Please select at least one day');
+            // Highlight day selector to indicate selection needed
+            const daySelector = document.querySelector('.day-selector');
+            daySelector.classList.add('shake');
+            setTimeout(() => daySelector.classList.remove('shake'), 500);
             return;
         }
 
         // Convert Set to sorted comma-separated string
         const days = Array.from(selectedDays).sort().join(',');
 
-        await window.api.addTask(title, days, taskTime);
+        await window.api.addTask(title, days, null, resetTime);
 
         // Reset form
         taskInput.value = '';
-        timeInput.value = '';
+        customResetCheck.checked = true;
+        resetTimeInput.classList.remove('hidden');
+        resetTimeInput.value = '';
         selectedDays.clear();
         dayButtons.forEach(btn => btn.classList.remove('selected'));
         taskInput.focus();
 
         loadTasks();
+        loadTaskTitles(); // Refresh autocomplete list
     });
 
     async function loadTasks() {
         const tasks = await window.api.getTasks(selectedDate);
         renderTasks(tasks);
+    }
+
+    function sortTasks(tasks) {
+        const sorted = [...tasks];
+        switch (sortMode) {
+            case 'alphabetical':
+                sorted.sort((a, b) => a.title.localeCompare(b.title));
+                break;
+            case 'reset-time':
+                sorted.sort((a, b) => {
+                    // Tasks with reset time first, sorted by time
+                    if (a.reset_time && b.reset_time) return a.reset_time.localeCompare(b.reset_time);
+                    if (a.reset_time) return -1;
+                    if (b.reset_time) return 1;
+                    return 0;
+                });
+                break;
+            case 'default':
+            default:
+                // Incomplete first, then by reset time
+                sorted.sort((a, b) => {
+                    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+                    if (a.reset_time && b.reset_time) return a.reset_time.localeCompare(b.reset_time);
+                    if (a.reset_time) return -1;
+                    if (b.reset_time) return 1;
+                    return 0;
+                });
+                break;
+        }
+        return sorted;
     }
 
     function renderTasks(tasks) {
@@ -116,7 +304,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        taskList.innerHTML = tasks.map(task => `
+        const sortedTasks = sortTasks(tasks);
+        taskList.innerHTML = sortedTasks.map(task => `
             <div class="task-item ${task.completed ? 'completed' : ''}" data-id="${task.id}">
                 <div class="checkbox ${task.completed ? 'checked' : ''}" data-action="toggle"></div>
                 <div class="task-content">
@@ -124,6 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="task-meta">
                         ${task.task_time ? `<span class="task-time">${formatTime(task.task_time)}</span>` : ''}
                         <span class="task-days">${formatDays(task.recurrence_value)}</span>
+                        ${task.reset_time ? `<span class="task-reset">Resets ${formatTime(task.reset_time)}</span>` : ''}
                     </div>
                 </div>
                 <button class="delete-btn" data-action="delete" title="Delete task">×</button>
@@ -147,9 +337,11 @@ document.addEventListener('DOMContentLoaded', () => {
             await window.api.toggleTask(taskId, selectedDate);
             loadTasks();
         } else if (action === 'delete') {
-            if (confirm('Delete this recurring task?')) {
+            const confirmed = await showConfirm('Delete this recurring task?');
+            if (confirmed) {
                 await window.api.deleteTask(taskId);
                 loadTasks();
+                loadTaskTitles();
             }
         }
     });

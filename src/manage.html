@@ -21,6 +21,7 @@
                         <th>Task</th>
                         <th>Days</th>
                         <th>Time</th>
+                        <th>Reset</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -30,6 +31,17 @@
 
         <div id="empty-state" class="empty-state" style="display: none;">
             <p>No tasks scheduled</p>
+        </div>
+    </div>
+
+    <!-- Custom confirm modal -->
+    <div id="confirm-modal" class="modal hidden">
+        <div class="modal-content">
+            <p id="confirm-message"></p>
+            <div class="modal-buttons">
+                <button id="confirm-yes" class="modal-btn confirm">Delete</button>
+                <button id="confirm-no" class="modal-btn cancel">Cancel</button>
+            </div>
         </div>
     </div>
 
