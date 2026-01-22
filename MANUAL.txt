@@ -1,5 +1,5 @@
-SLACKER - Quick Start Guide
-============================
+SLACKER - User Manual
+=====================
 
 INSTALLATION
 ------------
@@ -15,16 +15,37 @@ HOW TO USE
 
 ADDING A TASK
 1. Type your task in the text field (e.g., "Team standup")
+   - Autocomplete suggestions appear as you type based on existing tasks
+   - Use arrow keys to navigate suggestions, Enter to select
 2. Click the day buttons to select which days (Mon, Tue, Wed, etc.)
-3. Optionally set a time for a reminder notification
+3. Set a custom reset time (optional):
+   - "Reset" checkbox is enabled by default
+   - Set the time when you want the task to reset (become unchecked)
+   - Example: Set 4:00 AM so late-night tasks count for the previous day
+   - Leave empty for midnight reset (default behavior)
 4. Press the + button
 
-Example: "Take out trash" on Mon and Thu
+Example: "Take out trash" on Mon and Thu, resets at 6:00 AM
+
+CUSTOM RESET TIME
+- By default, tasks reset at midnight (12:00 AM)
+- Custom reset time lets you define when YOUR day starts
+- If reset is 4:00 AM and you complete a task at 2:00 AM, it stays
+  completed until 4:00 AM, then resets for the new day
+- Perfect for night owls or shift workers
 
 COMPLETING TASKS
 - Click the circle next to a task to mark it done
-- Completed tasks get crossed out
-- Tomorrow the same task will appear fresh again
+- Completed tasks get crossed out and move to the bottom
+- Tasks automatically reset at their reset time (midnight by default)
+
+SORTING TASKS
+- Use the "Sort" dropdown above the task list
+- Options:
+  - Status & Time: Incomplete first, then by reset time (default)
+  - Alphabetical: A-Z by task name
+  - Reset Time: Sorted by when tasks reset
+- Your sort preference is remembered
 
 NAVIGATING DATES
 - Use < > arrows to see other days
@@ -34,19 +55,24 @@ NAVIGATING DATES
 MANAGING ALL TASKS
 - Click "Manage" button at the bottom
 - Opens a window showing ALL your recurring tasks
+- Shows task name, days, time, and reset time
 - Delete tasks you no longer need from here
 
 NOTIFICATIONS
-- If you set a time, you'll get a Windows notification when it's due
+- Reset reminders: Get notified 1 hour before a task resets
+- Reset alerts: Get notified when tasks reset
+- Pooled notifications: Multiple tasks resetting at the same time
+  are combined into a single notification
 - Make sure Windows notifications are enabled for Slacker
 
 
 TIPS
 ----
 - Tasks repeat weekly on the days you select
-- Checking off a task only marks it done for THAT day
+- Checking off a task only marks it done until its reset time
 - The app saves everything locally - no account needed
 - Your data is stored in: %APPDATA%\slacker
+- The task list auto-refreshes every 10 seconds
 
 
 UNINSTALL
