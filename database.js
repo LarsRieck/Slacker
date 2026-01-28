@@ -118,41 +118,12 @@ function getAllTasks() {
 }
 
 function getTasksForDate(dateStr) {
-    const date = new Date(dateStr + 'T00:00:00');
-    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const dayOfMonth = date.getDate();
-
     const allTasks = getAllTasks();
 
-    // Check if recurrence matches for a given date
-    function matchesRecurrence(task, targetDate) {
-        const d = new Date(targetDate + 'T00:00:00');
-        const dow = d.getDay();
-        const dom = d.getDate();
-
-        if (task.recurrence_type === 'daily') {
-            return true;
-        }
-        if (task.recurrence_type === 'weekly' && task.recurrence_value) {
-            const days = task.recurrence_value.split(',').map(Number);
-            return days.includes(dow);
-        }
-        if (task.recurrence_type === 'monthly' && task.recurrence_value) {
-            return parseInt(task.recurrence_value) === dom;
-        }
-        return false;
-    }
-
-    // Filter tasks that apply to this date based on recurrence
-    // (reset time only affects completion tracking, not display)
-    const tasksForDate = allTasks.filter(task => {
-        return matchesRecurrence(task, dateStr);
-    });
-
-    // Add completion status
+    // Add completion status to all tasks
     // Use effective date only when viewing today, otherwise use the selected date
     const today = getTodayDate();
-    return tasksForDate.map(task => {
+    return allTasks.map(task => {
         let completionDate;
         if (dateStr === today) {
             // Viewing today: use effective date (handles custom reset times)
@@ -167,13 +138,6 @@ function getTasksForDate(dateStr) {
             ...task,
             completed: isCompleted
         };
-    }).sort((a, b) => {
-        // Sort: incomplete first, then by time
-        if (a.completed !== b.completed) return a.completed ? 1 : -1;
-        if (a.task_time && b.task_time) return a.task_time.localeCompare(b.task_time);
-        if (a.task_time) return -1;
-        if (b.task_time) return 1;
-        return 0;
     });
 }
 

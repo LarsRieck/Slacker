@@ -51,7 +51,7 @@ Uses sql.js (in-memory SQLite) with file persistence to `%APPDATA%\slacker\slack
 
 **Key functions:**
 - `getEffectiveDateForTask(resetTime)` - Calculates which date a task belongs to based on reset time
-- `getTasksForDate(dateStr)` - Gets tasks for a date with completion status
+- `getTasksForDate(dateStr)` - Gets all tasks with completion status for the given date (no recurrence filtering)
 - `getTasksWithResetTimesForToday()` - Gets tasks with reset times for notification checking
 
 ### Custom Reset Time Logic
@@ -78,7 +78,9 @@ Runs every 60 seconds, checking for:
 
 ### UI Features
 
-- **Sorting**: Three modes (Status & Time, Alphabetical, Reset Time), saved to localStorage
+- **Task Display**: All tasks are always shown regardless of recurrence; completed tasks always appear at the bottom
+- **Sorting**: Three modes (Status & Time, Alphabetical, Reset Time), applied within completed/incomplete groups, saved to localStorage
+- **Time Format**: 24-hour format (HH:MM)
 - **Autocomplete**: Suggests existing task titles, keyboard navigable
 - **Custom modals**: Replace native confirm/alert to avoid Windows focus issues
 - **Auto-refresh**: Task list refreshes every 10 seconds to catch reset transitions

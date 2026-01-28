@@ -260,33 +260,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function sortTasks(tasks) {
-        const sorted = [...tasks];
-        switch (sortMode) {
-            case 'alphabetical':
-                sorted.sort((a, b) => a.title.localeCompare(b.title));
-                break;
-            case 'reset-time':
-                sorted.sort((a, b) => {
+        // Separate into incomplete and completed
+        const incomplete = tasks.filter(t => !t.completed);
+        const completed = tasks.filter(t => t.completed);
+
+        // Sort function based on mode (applied within each group)
+        function sortByMode(a, b) {
+            switch (sortMode) {
+                case 'alphabetical':
+                    return a.title.localeCompare(b.title);
+                case 'reset-time':
                     // Tasks with reset time first, sorted by time
                     if (a.reset_time && b.reset_time) return a.reset_time.localeCompare(b.reset_time);
                     if (a.reset_time) return -1;
                     if (b.reset_time) return 1;
                     return 0;
-                });
-                break;
-            case 'default':
-            default:
-                // Incomplete first, then by reset time
-                sorted.sort((a, b) => {
-                    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+                case 'default':
+                default:
+                    // Sort by reset time
                     if (a.reset_time && b.reset_time) return a.reset_time.localeCompare(b.reset_time);
                     if (a.reset_time) return -1;
                     if (b.reset_time) return 1;
                     return 0;
-                });
-                break;
+            }
         }
-        return sorted;
+
+        // Sort each group
+        incomplete.sort(sortByMode);
+        completed.sort(sortByMode);
+
+        // Return incomplete first, then completed
+        return [...incomplete, ...completed];
     }
 
     function renderTasks(tasks) {
@@ -347,11 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function formatTime(time) {
-        const [hours, minutes] = time.split(':');
-        const h = parseInt(hours);
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        const hour12 = h % 12 || 12;
-        return `${hour12}:${minutes} ${ampm}`;
+        return time;
     }
 
     function formatDays(daysStr) {

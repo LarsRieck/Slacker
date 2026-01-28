@@ -36,13 +36,20 @@ CUSTOM RESET TIME
 
 COMPLETING TASKS
 - Click the circle next to a task to mark it done
-- Completed tasks get crossed out and move to the bottom
+- Completed tasks get crossed out and always appear at the bottom
 - Tasks automatically reset at their reset time (midnight by default)
+
+ALL TASKS ALWAYS VISIBLE
+- All tasks are shown regardless of which days they're scheduled for
+- This gives you a complete overview of everything at once
+- Completed tasks are separated and shown at the bottom
 
 SORTING TASKS
 - Use the "Sort" dropdown above the task list
+- Completed tasks always appear at the bottom, incomplete at the top
+- Sorting is applied within each group (incomplete/completed)
 - Options:
-  - Status & Time: Incomplete first, then by reset time (default)
+  - Status & Time: Sort by reset time (default)
   - Alphabetical: A-Z by task name
   - Reset Time: Sorted by when tasks reset
 - Your sort preference is remembered
@@ -50,7 +57,7 @@ SORTING TASKS
 NAVIGATING DATES
 - Use < > arrows to see other days
 - Or click the date to pick from calendar
-- See what tasks are scheduled for any day
+- View completion status for any day (all tasks are always shown)
 
 MANAGING ALL TASKS
 - Click "Manage" button at the bottom
@@ -70,6 +77,7 @@ TIPS
 ----
 - Tasks repeat weekly on the days you select
 - Checking off a task only marks it done until its reset time
+- Times are displayed in 24-hour format (e.g., 14:30 instead of 2:30 PM)
 - The app saves everything locally - no account needed
 - Your data is stored in: %APPDATA%\slacker
 - The task list auto-refreshes every 10 seconds
