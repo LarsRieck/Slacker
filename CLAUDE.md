@@ -10,6 +10,8 @@ npm start          # Start the Electron application
 npm run build:win  # Build Windows NSIS installer (output: dist/)
 ```
 
+**Release workflow:** When asked to build for a release, always bump the version in `package.json` before building.
+
 No test framework or linting tools are currently configured.
 
 ## Architecture Overview
