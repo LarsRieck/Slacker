@@ -49,18 +49,27 @@ Uses sql.js (in-memory SQLite) with file persistence to `%APPDATA%\slacker\slack
 **Recurrence types:**
 - `daily` - Every day
 - `weekly` - Specific days (0=Sun through 6=Sat, comma-separated)
-- `monthly` - Specific day of month (1-31)
+- `monthly` - Specific day of month (1-31); if the configured day exceeds the month's length, the last day of the month is used instead
 
 **Key functions:**
-- `getEffectiveDateForTask(resetTime)` - Calculates which date a task belongs to based on reset time
+- `getEffectiveDateForTask(resetTime)` - Calculates which date a daily/weekly task belongs to based on reset time
+- `getMonthlyEffectiveDate(dayOfMonth, resetTime)` - Calculates the current monthly period's start date (the most recent occurrence of `dayOfMonth`, clamped to the month's max days, accounting for `reset_time`)
 - `getTasksForDate(dateStr)` - Gets all tasks with completion status for the given date (no recurrence filtering)
 - `getTasksWithResetTimesForToday()` - Gets tasks with reset times for notification checking
 
 ### Custom Reset Time Logic
 
-Tasks can have a custom `reset_time` (HH:MM format). The "effective date" determines which day a task belongs to:
+Tasks can have a custom `reset_time` (HH:MM format). The "effective date" determines which period a task belongs to:
+
+**Daily/weekly tasks:**
 - If current time is before reset_time → task is still in yesterday's period
 - If current time is at/after reset_time → task is in today's period
+
+**Monthly tasks:**
+- The effective date is the most recent occurrence of the configured `recurrence_value` day (clamped to the month's last day)
+- If today is the reset day but before reset_time → still in last month's period
+- If today is the reset day and at/after reset_time → new monthly period starts
+- Completion persists for the entire monthly period (not reset daily)
 
 This affects both display (completion status) and toggle operations.
 
@@ -81,6 +90,7 @@ Runs every 60 seconds, checking for:
 ### UI Features
 
 - **Task Display**: All tasks are always shown regardless of recurrence; completed tasks always appear at the bottom
+- **Monthly mode**: "Monthly" toggle button in the day selector switches to monthly recurrence; a number input (1–31) sets the reset day; day-of-week buttons are disabled while monthly mode is active
 - **Sorting**: Three modes (Status & Time, Alphabetical, Reset Time), applied within completed/incomplete groups, saved to localStorage
 - **Time Format**: 24-hour format (HH:MM)
 - **Autocomplete**: Suggests existing task titles, keyboard navigable

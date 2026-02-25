@@ -92,6 +92,49 @@ function getEffectiveDateForTask(resetTime) {
     return now.toISOString().split('T')[0];
 }
 
+// Calculate effective date for a monthly-reset task
+// dayOfMonth: the configured reset day (1-31, clamped to month's max days)
+// resetTime: optional HH:MM time of day for the reset
+function getMonthlyEffectiveDate(dayOfMonth, resetTime) {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const resetMinutes = resetTime ? (() => {
+        const [h, m] = resetTime.split(':').map(Number);
+        return h * 60 + m;
+    })() : 0;
+
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0-indexed
+    const todayDay = now.getDate();
+
+    function getClampedDay(y, mo, d) {
+        const maxDay = new Date(y, mo + 1, 0).getDate();
+        return Math.min(d, maxDay);
+    }
+
+    const clampedThisMonth = getClampedDay(year, month, dayOfMonth);
+
+    // Are we at or past this month's reset?
+    if (todayDay > clampedThisMonth ||
+        (todayDay === clampedThisMonth && currentMinutes >= resetMinutes)) {
+        const mo = String(month + 1).padStart(2, '0');
+        const d = String(clampedThisMonth).padStart(2, '0');
+        return `${year}-${mo}-${d}`;
+    }
+
+    // Before this month's reset: use last month's reset date
+    let lastMonth = month - 1;
+    let lastYear = year;
+    if (lastMonth < 0) {
+        lastMonth = 11;
+        lastYear--;
+    }
+    const clampedLastMonth = getClampedDay(lastYear, lastMonth, dayOfMonth);
+    const mo = String(lastMonth + 1).padStart(2, '0');
+    const d = String(clampedLastMonth).padStart(2, '0');
+    return `${lastYear}-${mo}-${d}`;
+}
+
 // recurrence_type: "daily", "weekly", "monthly"
 // recurrence_value: for weekly = "0,1,2" (Sun,Mon,Tue), for monthly = "15" (day of month)
 // resetTime: optional custom reset time (HH:MM), null means midnight
@@ -127,7 +170,11 @@ function getTasksForDate(dateStr) {
         let completionDate;
         if (dateStr === today) {
             // Viewing today: use effective date (handles custom reset times)
-            completionDate = getEffectiveDateForTask(task.reset_time);
+            if (task.recurrence_type === 'monthly' && task.recurrence_value) {
+                completionDate = getMonthlyEffectiveDate(parseInt(task.recurrence_value), task.reset_time);
+            } else {
+                completionDate = getEffectiveDateForTask(task.reset_time);
+            }
         } else {
             // Viewing past/future: use the actual selected date
             completionDate = dateStr;
@@ -153,17 +200,27 @@ function getCompletionsForDate(dateStr) {
 }
 
 function toggleTask(taskId, dateStr) {
-    // Get task to determine its reset_time
-    const stmt = db.prepare('SELECT reset_time FROM tasks WHERE id = ?');
+    // Get task to determine its reset_time and recurrence type
+    const stmt = db.prepare('SELECT reset_time, recurrence_type, recurrence_value FROM tasks WHERE id = ?');
     stmt.bind([taskId]);
     let resetTime = null;
+    let recurrenceType = 'weekly';
+    let recurrenceValue = null;
     if (stmt.step()) {
-        resetTime = stmt.getAsObject().reset_time;
+        const row = stmt.getAsObject();
+        resetTime = row.reset_time;
+        recurrenceType = row.recurrence_type;
+        recurrenceValue = row.recurrence_value;
     }
     stmt.free();
 
     // Use effective date for completion tracking
-    const effectiveDate = getEffectiveDateForTask(resetTime);
+    let effectiveDate;
+    if (recurrenceType === 'monthly' && recurrenceValue) {
+        effectiveDate = getMonthlyEffectiveDate(parseInt(recurrenceValue), resetTime);
+    } else {
+        effectiveDate = getEffectiveDateForTask(resetTime);
+    }
     const completions = getCompletionsForDate(effectiveDate);
     const isCompleted = completions.some(c => c.task_id === taskId);
 
@@ -205,7 +262,9 @@ function getTasksWithTimesForToday() {
             const days = task.recurrence_value.split(',').map(Number);
             matchesRecurrence = days.includes(dayOfWeek);
         } else if (task.recurrence_type === 'monthly' && task.recurrence_value) {
-            matchesRecurrence = parseInt(task.recurrence_value) === dayOfMonth;
+            const maxDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+            const clampedDay = Math.min(parseInt(task.recurrence_value), maxDay);
+            matchesRecurrence = clampedDay === dayOfMonth;
         }
 
         if (!matchesRecurrence) return false;
@@ -236,7 +295,9 @@ function getTasksWithResetTimesForToday() {
             const days = task.recurrence_value.split(',').map(Number);
             matchesRecurrence = days.includes(dayOfWeek);
         } else if (task.recurrence_type === 'monthly' && task.recurrence_value) {
-            matchesRecurrence = parseInt(task.recurrence_value) === dayOfMonth;
+            const maxDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+            const clampedDay = Math.min(parseInt(task.recurrence_value), maxDay);
+            matchesRecurrence = clampedDay === dayOfMonth;
         }
 
         return matchesRecurrence;

@@ -3,7 +3,7 @@ SLACKER - User Manual
 
 INSTALLATION
 ------------
-1. Double-click "Slacker Setup 1.0.0.exe"
+1. Double-click "Slacker Setup 1.3.0.exe"
 2. If Windows warns about unknown publisher, click "More info" → "Run anyway"
 3. Choose install location (or keep default)
 4. Click Install
@@ -17,7 +17,11 @@ ADDING A TASK
 1. Type your task in the text field (e.g., "Team standup")
    - Autocomplete suggestions appear as you type based on existing tasks
    - Use arrow keys to navigate suggestions, Enter to select
-2. Click the day buttons to select which days (Mon, Tue, Wed, etc.)
+2. Choose a recurrence schedule:
+   a) Weekly: Click the day buttons (Mon, Tue, Wed, etc.) to pick which days
+   b) Monthly: Click the "Monthly" button, then enter the day of the month (1-31)
+      - If the day exceeds the month's length (e.g., 31 in February), the last
+        day of that month is used automatically
 3. Set a custom reset time (optional):
    - "Reset" checkbox is enabled by default
    - Set the time when you want the task to reset (become unchecked)
@@ -25,19 +29,32 @@ ADDING A TASK
    - Leave empty for midnight reset (default behavior)
 4. Press the + button
 
-Example: "Take out trash" on Mon and Thu, resets at 6:00 AM
+Examples:
+  "Take out trash" on Mon and Thu, resets at 6:00 AM (weekly)
+  "Pay bills" on the 1st of every month (monthly)
+  "Monthly review" on the 31st - uses the last day in shorter months
+
+MONTHLY RECURRENCE
+- Click the "Monthly" button in the day selector row to switch to monthly mode
+- The day-of-week buttons are disabled while monthly mode is active
+- Enter a day between 1 and 31
+- The task's completion persists for the entire month and only resets on the
+  configured day (or the last day of the month if the day doesn't exist)
+- Click "Monthly" again to switch back to weekly mode
 
 CUSTOM RESET TIME
 - By default, tasks reset at midnight (12:00 AM)
 - Custom reset time lets you define when YOUR day starts
-- If reset is 4:00 AM and you complete a task at 2:00 AM, it stays
-  completed until 4:00 AM, then resets for the new day
+- For weekly tasks: if reset is 4:00 AM and you complete a task at 2:00 AM,
+  it stays completed until 4:00 AM, then resets for the new day
+- For monthly tasks: the reset time on the reset day determines when the new
+  monthly period begins (before that time, the previous month's period is active)
 - Perfect for night owls or shift workers
 
 COMPLETING TASKS
 - Click the circle next to a task to mark it done
 - Completed tasks get crossed out and always appear at the bottom
-- Tasks automatically reset at their reset time (midnight by default)
+- Tasks automatically reset at their configured time
 
 ALL TASKS ALWAYS VISIBLE
 - All tasks are shown regardless of which days they're scheduled for
@@ -62,7 +79,7 @@ NAVIGATING DATES
 MANAGING ALL TASKS
 - Click "Manage" button at the bottom
 - Opens a window showing ALL your recurring tasks
-- Shows task name, days, time, and reset time
+- Shows task name, schedule (days or "Day N" for monthly), time, and reset time
 - Delete tasks you no longer need from here
 
 NOTIFICATIONS
@@ -75,8 +92,9 @@ NOTIFICATIONS
 
 TIPS
 ----
-- Tasks repeat weekly on the days you select
-- Checking off a task only marks it done until its reset time
+- Weekly tasks repeat on the days you select
+- Monthly tasks repeat once per month on the configured day
+- Checking off a task only marks it done until its next reset
 - Times are displayed in 24-hour format (e.g., 14:30 instead of 2:30 PM)
 - The app saves everything locally - no account needed
 - Your data is stored in: %APPDATA%\slacker

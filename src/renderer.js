@@ -8,7 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedDateInput = document.getElementById('selected-date');
     const prevDayBtn = document.getElementById('prev-day');
     const nextDayBtn = document.getElementById('next-day');
-    const dayButtons = document.querySelectorAll('.day-btn');
+    const dayButtons = document.querySelectorAll('.day-btn[data-day]');
+    const monthlyToggleBtn = document.getElementById('monthly-toggle-btn');
+    const monthlyDayRow = document.getElementById('monthly-day-row');
+    const monthlyDayInput = document.getElementById('monthly-day-input');
     const manageBtn = document.getElementById('manage-btn');
     const sortSelect = document.getElementById('sort-select');
     const confirmModal = document.getElementById('confirm-modal');
@@ -51,6 +54,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Selected days for new task (defaults to none)
     let selectedDays = new Set();
+
+    // Monthly mode state
+    let isMonthlyMode = false;
+
+    monthlyToggleBtn.addEventListener('click', () => {
+        isMonthlyMode = !isMonthlyMode;
+        if (isMonthlyMode) {
+            monthlyToggleBtn.classList.add('selected');
+            monthlyDayRow.classList.remove('hidden');
+            selectedDays.clear();
+            dayButtons.forEach(btn => {
+                btn.classList.remove('selected');
+                btn.disabled = true;
+            });
+        } else {
+            monthlyToggleBtn.classList.remove('selected');
+            monthlyDayRow.classList.add('hidden');
+            monthlyDayInput.value = '';
+            dayButtons.forEach(btn => {
+                btn.disabled = false;
+            });
+        }
+    });
 
     // Current sort mode
     let sortMode = localStorage.getItem('sortMode') || 'default';
@@ -228,18 +254,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const resetTime = customResetCheck.checked && resetTimeInput.value ? resetTimeInput.value : null;
 
         if (!title) return;
-        if (selectedDays.size === 0) {
-            // Highlight day selector to indicate selection needed
-            const daySelector = document.querySelector('.day-selector');
-            daySelector.classList.add('shake');
-            setTimeout(() => daySelector.classList.remove('shake'), 500);
-            return;
+
+        if (isMonthlyMode) {
+            const dayVal = parseInt(monthlyDayInput.value);
+            if (!monthlyDayInput.value || dayVal < 1 || dayVal > 31) {
+                monthlyDayRow.classList.add('shake');
+                setTimeout(() => monthlyDayRow.classList.remove('shake'), 500);
+                return;
+            }
+            await window.api.addTask(title, 'monthly', String(dayVal), null, resetTime);
+        } else {
+            if (selectedDays.size === 0) {
+                // Highlight day selector to indicate selection needed
+                const daySelector = document.querySelector('.day-selector');
+                daySelector.classList.add('shake');
+                setTimeout(() => daySelector.classList.remove('shake'), 500);
+                return;
+            }
+            // Convert Set to sorted comma-separated string
+            const days = Array.from(selectedDays).sort().join(',');
+            await window.api.addTask(title, 'weekly', days, null, resetTime);
         }
-
-        // Convert Set to sorted comma-separated string
-        const days = Array.from(selectedDays).sort().join(',');
-
-        await window.api.addTask(title, days, null, resetTime);
 
         // Reset form
         taskInput.value = '';
@@ -248,6 +283,9 @@ document.addEventListener('DOMContentLoaded', () => {
         resetTimeInput.value = '';
         selectedDays.clear();
         dayButtons.forEach(btn => btn.classList.remove('selected'));
+        if (isMonthlyMode) {
+            monthlyDayInput.value = '';
+        }
         taskInput.focus();
 
         loadTasks();
@@ -316,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="task-title">${escapeHtml(task.title)}</div>
                     <div class="task-meta">
                         ${task.task_time ? `<span class="task-time">${formatTime(task.task_time)}</span>` : ''}
-                        <span class="task-days">${formatDays(task.recurrence_value)}</span>
+                        <span class="task-days">${formatDays(task.recurrence_type, task.recurrence_value)}</span>
                         ${task.reset_time ? `<span class="task-reset">Resets ${formatTime(task.reset_time)}</span>` : ''}
                     </div>
                 </div>
@@ -354,7 +392,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return time;
     }
 
-    function formatDays(daysStr) {
+    function formatDays(recurrenceType, daysStr) {
+        if (recurrenceType === 'monthly') {
+            return daysStr ? `Day ${daysStr}` : '';
+        }
         if (!daysStr) return '';
         const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const days = daysStr.split(',').map(Number);

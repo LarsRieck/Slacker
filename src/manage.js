@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
         taskTbody.innerHTML = tasks.map(task => `
             <tr data-id="${task.id}">
                 <td class="task-name">${escapeHtml(task.title)}</td>
-                <td class="task-days-cell">${formatDays(task.recurrence_value)}</td>
+                <td class="task-days-cell">${formatDays(task.recurrence_type, task.recurrence_value)}</td>
                 <td class="task-time-cell">${task.task_time ? formatTime(task.task_time) : '-'}</td>
                 <td class="task-reset-cell">${task.reset_time ? formatTime(task.reset_time) : '-'}</td>
                 <td>
@@ -89,7 +89,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return time;
     }
 
-    function formatDays(daysStr) {
+    function formatDays(recurrenceType, daysStr) {
+        if (recurrenceType === 'monthly') {
+            return daysStr ? `Day ${daysStr}` : '-';
+        }
         if (!daysStr) return '-';
         const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const days = daysStr.split(',').map(Number);
